@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="theme-color" content="#f6f7f9">
+    <meta name="color-scheme" content="light dark">
+    <title>听澜 2</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="light">
+<div class="app">
+    <!-- 侧栏：对话列表 -->
+    <aside class="sidebar" id="sidebar">
+        <div class="side-head">
+            <div class="brand">听澜 <span class="ver">2</span></div>
+            <div class="side-head-actions">
+                <button class="icon-btn" id="newChatBtn" title="新对话" aria-label="新对话">
+                    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+                <button class="icon-btn only-mobile" id="closeSidebarBtn" title="收起菜单" aria-label="收起菜单">✕</button>
+            </div>
+        </div>
+        <div class="search-wrap">
+            <input class="search-input" id="searchInput" type="search" placeholder="搜索对话或内容…" autocomplete="off" aria-label="搜索对话">
+        </div>
+        <nav class="chat-list" id="chatList" aria-label="对话列表"></nav>
+        <div class="side-foot">
+            <button class="side-btn" id="presetBtn"><span aria-hidden="true">📋</span><span>写作预设</span></button>
+            <button class="side-btn" id="behaviorBtn"><span aria-hidden="true">🧭</span><span>行为准则</span></button>
+            <button class="side-btn" id="templateBtn"><span aria-hidden="true">📚</span><span>角色模板库</span></button>
+            <button class="side-btn" id="settingsBtn"><span aria-hidden="true">⚙️</span><span>设置</span></button>
+            <p class="side-note">对话只保存在这台设备</p>
+        </div>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+
+    <!-- 主区域 -->
+    <main class="main">
+        <div class="chat-bg-layer" id="chatBgLayer" hidden></div>
+        <header class="topbar">
+            <button class="icon-btn only-mobile" id="menuBtn" aria-label="打开菜单">☰</button>
+            <div class="topbar-title">
+                <h1 id="chatTitle">新对话</h1>
+                <span class="ctx-note" id="ctxNote"></span>
+            </div>
+            <button class="branch-jump" id="latestBtn" type="button" hidden title="你正在看一条旧分支，点这里回到最新的一条">↩ 最新</button>
+            <button class="icon-btn" id="roleBtn" title="角色与故事背景" aria-label="角色与故事背景">🎭</button>
+            <button class="icon-btn" id="renameBtn" title="重命名对话" aria-label="重命名对话">✎</button>
+        </header>
+
+        <div class="messages" id="messages" role="log" aria-live="polite"></div>
+
+        <button class="jump-btn" id="jumpBtn" hidden aria-label="回到底部">↓</button>
+
+        <footer class="composer">
+            <div class="composer-inner">
+                <button class="think-pill" id="thinkBtn" aria-pressed="false" title="深度思考：先展示推理过程，再给出回答">
+                    <span class="pill-ico" aria-hidden="true">🧠</span>
+                    <span class="pill-label">深度思考</span>
+                </button>
+                <div class="input-box">
+                    <textarea id="input" rows="1" placeholder="说点什么…" autocomplete="off"></textarea>
+                </div>
+                <button class="round-btn stop" id="stopBtn" hidden aria-label="停止生成">■</button>
+                <button class="round-btn send" id="sendBtn" aria-label="发送">↑</button>
+            </div>
+        </footer>
+    </main>
+</div>
+
+<!-- API Key -->
+<div class="dialog" id="keyDialog" hidden>
+    <div class="dialog-card">
+        <h2>设置 API Key</h2>
+        <p class="dialog-hint">在 platform.deepseek.com 创建。Key 只保存在这台设备的浏览器里，不会上传到任何地方。</p>
+        <input class="text-input" id="keyInput" type="password" placeholder="sk-..." autocomplete="off" autocapitalize="off" spellcheck="false">
+        <div class="dialog-actions">
+            <button class="btn ghost" id="keyCancel">取消</button>
+            <button class="btn primary" id="keySave">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 重命名 -->
+<div class="dialog" id="renameDialog" hidden>
+    <div class="dialog-card">
+        <h2>重命名对话</h2>
+        <input class="text-input" id="renameInput" type="text" maxlength="60" autocomplete="off">
+        <div class="dialog-actions">
+            <button class="btn ghost" id="renameCancel">取消</button>
+            <button class="btn primary" id="renameSave">保存</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- 角色 / 我的角色 / 故事背景 -->
+<div class="dialog" id="cardDialog" hidden>
+    <div class="dialog-card sheet">
+        <div class="sheet-head">
+            <div class="tabs" id="cardTabs" role="tablist">
+                <button class="tab active" data-tab="ai" type="button">AI 角色</button>
+                <button class="tab" data-tab="me" type="button">我的角色</button>
+                <button class="tab" data-tab="scene" type="button">故事背景</button>
+            </div>
+            <button class="icon-btn" id="cardClose" type="button" aria-label="关闭">✕</button>
+        </div>
+        <div class="sheet-body">
+            <div class="panel" id="panel-ai"></div>
+            <div class="panel" id="panel-me" hidden></div>
+            <div class="panel" id="panel-scene" hidden></div>
+        </div>
+        <div class="sheet-foot">
+            <button class="btn ghost" id="cardClear" type="button">清除本页</button>
+            <div class="foot-right">
+                <button class="btn ghost" id="cardTemplates" type="button">模板库</button>
+                <button class="btn primary" id="cardSave" type="button">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 写作预设 -->
+<div class="dialog" id="presetDialog" hidden>
+    <div class="dialog-card sheet wide">
+        <div class="sheet-head">
+            <h2>写作预设</h2>
+            <button class="icon-btn" id="presetClose" type="button" aria-label="关闭">✕</button>
+        </div>
+        <div class="sheet-body">
+            <p class="dialog-hint">换一套文风要求，对所有对话立即生效。切换预设时会自动把当前编辑存回原预设。</p>
+            <div class="preset-row">
+                <select id="presetSelect" class="text-input" aria-label="选择预设"></select>
+                <button class="btn ghost" id="presetNew" type="button" title="另存为新预设">＋</button>
+                <button class="btn ghost" id="presetRename" type="button" title="重命名">✎</button>
+                <button class="btn ghost" id="presetDel" type="button" title="删除">✕</button>
+            </div>
+            <div class="form-row"><label for="p-writing">写作要求</label><textarea id="p-writing" rows="2" placeholder="例如：第三人称限知视角，动作与对白交替"></textarea></div>
+            <div class="form-row"><label for="p-dialogue">对话要求</label><textarea id="p-dialogue" rows="2" placeholder="例如：说话简短口语化，允许停顿"></textarea></div>
+            <div class="form-row"><label for="p-theme">对话主旨</label><textarea id="p-theme" rows="2" placeholder="例如：悬疑、慢热、权谋"></textarea></div>
+            <div class="form-row"><label for="p-banned">避免使用的词</label><textarea id="p-banned" rows="2" placeholder="仿佛、似乎、一丝……"></textarea></div>
+            <div class="form-row"><label for="p-taboos">禁忌</label><textarea id="p-taboos" rows="2" placeholder="例如：不要总结剧情"></textarea></div>
+            <div class="form-row"><label for="p-aux">补充要求</label><textarea id="p-aux" rows="2" placeholder="其它想补充的写作要求"></textarea></div>
+        </div>
+        <div class="sheet-foot">
+            <span></span>
+            <div class="foot-right">
+                <button class="btn ghost" id="presetCancel" type="button">取消</button>
+                <button class="btn primary" id="presetSave" type="button">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 行为准则 -->
+<div class="dialog" id="behaviorDialog" hidden>
+    <div class="dialog-card sheet wide">
+        <div class="sheet-head">
+            <h2>行为准则</h2>
+            <button class="icon-btn" id="behaviorClose" type="button" aria-label="关闭">✕</button>
+        </div>
+        <div class="sheet-body">
+            <p class="dialog-hint">所有角色共用的“铁律”，优先级最高。它决定 AI 会不会替你说话、解释内心、总结前文。</p>
+            <textarea class="text-area" id="behaviorText" rows="12"></textarea>
+        </div>
+        <div class="sheet-foot">
+            <button class="btn ghost" id="behaviorReset" type="button">恢复默认</button>
+            <div class="foot-right">
+                <button class="btn ghost" id="behaviorCancel" type="button">取消</button>
+                <button class="btn primary" id="behaviorSave" type="button">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 角色模板库 -->
+<div class="dialog" id="templateDialog" hidden>
+    <div class="dialog-card sheet wide">
+        <div class="sheet-head">
+            <h2>角色模板库</h2>
+            <button class="icon-btn" id="templateClose" type="button" aria-label="关闭">✕</button>
+        </div>
+        <div class="sheet-body">
+            <div class="template-list" id="templateList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 设置 -->
+<div class="dialog" id="settingsDialog" hidden>
+    <div class="dialog-card sheet wide">
+        <div class="sheet-head">
+            <h2>设置</h2>
+            <button class="icon-btn" id="settingsClose" type="button" aria-label="关闭">✕</button>
+        </div>
+        <div class="sheet-body">
+            <div class="settings-list">
+                <button class="setting-row" id="openBg" type="button"><span class="setting-name">🖼 聊天背景</span><span class="setting-hint" id="bgState">未设置</span></button>
+                <button class="setting-row" id="openAutoPush" type="button"><span class="setting-name">❤️ 角色主动性</span><span class="setting-hint" id="apState">已关闭</span></button>
+                <button class="setting-row" id="openExport" type="button"><span class="setting-name">📤 导出对话</span><span class="setting-hint">TXT / MD / JSON</span></button>
+                <button class="setting-row" id="doBackup" type="button"><span class="setting-name">💾 备份全部数据</span><span class="setting-hint">对话、角色、预设</span></button>
+                <button class="setting-row" id="doRestore" type="button"><span class="setting-name">📥 恢复备份</span><span class="setting-hint">会覆盖当前数据</span></button>
+                <button class="setting-row" id="openTheme" type="button"><span class="setting-name">🌓 主题</span><span class="setting-hint" id="themeState">跟随系统</span></button>
+                <button class="setting-row" id="openKey" type="button"><span class="setting-name">🔑 API Key</span><span class="setting-hint" id="keyState">未设置</span></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 聊天背景 -->
+<div class="dialog" id="bgDialog" hidden>
+    <div class="dialog-card sheet wide">
+        <div class="sheet-head">
+            <h2>聊天背景</h2>
+            <button class="icon-btn" id="bgClose" type="button" aria-label="关闭">✕</button>
+        </div>
+        <div class="sheet-body">
+            <div class="bg-preview" id="bgPreview"><div class="bg-preview-img" id="bgPreviewImg"></div><span id="bgPreviewText">暂无背景</span></div>
+            <input type="file" id="bgFile" accept="image/*" hidden>
+            <p class="dialog-hint">图片只存在这台设备里，不会上传。</p>
+            <button class="btn ghost" id="bgPick" type="button">📁 选择图片</button>
+            <div class="range-row">
+                <label for="bgOpacity">透明度</label>
+                <input type="range" id="bgOpacity" min="5" max="45" value="16">
+                <span id="bgOpacityVal">16%</span>
+            </div>
+            <div class="range-row">
+                <label for="bgBlur">模糊</label>
+                <input type="range" id="bgBlur" min="0" max="12" value="2">
+                <span id="bgBlurVal">2px</span>
+            </div>
+        </div>
+        <div class="sheet-foot">
+            <button class="btn ghost" id="bgRemove" type="button">移除背景</button>
+            <div class="foot-right">
+                <button class="btn ghost" id="bgCancel" type="button">取消</button>
+                <button class="btn primary" id="bgSave" type="button">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 角色主动性 -->
+<div class="dialog" id="autoPushDialog" hidden>
+    <div class="dialog-card sheet wide">
+        <div class="sheet-head">
+            <h2>角色主动性</h2>
+            <button class="icon-btn" id="apClose" type="button" aria-label="关闭">✕</button>
+        </div>
+        <div class="sheet-body">
+            <p class="dialog-hint">你沉默一段时间后，让角色主动说一句话或做一个小动作。只在这个页面开着时生效，且最多连说几句就停。<strong>需要先给对话设置 AI 角色卡。</strong></p>
+            <label class="check-row"><input type="checkbox" id="apEnabled"> 开启角色主动性</label>
+            <div class="range-row">
+                <label for="apInterval">沉默</label>
+                <input type="range" id="apInterval" min="1" max="120" value="20">
+                <span id="apIntervalVal">20 分钟</span>
+            </div>
+            <div class="range-row">
+                <label for="apMax">连说</label>
+                <input type="range" id="apMax" min="1" max="5" value="2">
+                <span id="apMaxVal">最多 2 句</span>
+            </div>
+            <div class="form-row">
+                <label>暂停时段（0–23 点，例如 23 到 8 表示夜里不说话）</label>
+                <div class="hour-row">
+                    <input type="number" id="apPauseStart" min="0" max="23" value="23">
+                    <span>到</span>
+                    <input type="number" id="apPauseEnd" min="0" max="23" value="8">
+                </div>
+            </div>
+        </div>
+        <div class="sheet-foot">
+            <span></span>
+            <div class="foot-right">
+                <button class="btn ghost" id="apCancel" type="button">取消</button>
+                <button class="btn primary" id="apSave" type="button">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 导出 -->
+<div class="dialog" id="exportDialog" hidden>
+    <div class="dialog-card wide">
+        <h2>导出对话</h2>
+        <p class="dialog-hint">导出当前这条时间线。JSON 会包含这个对话的整棵分支树，方便以后完整保留。</p>
+        <button class="export-option" id="expTxt" type="button">📄 纯文本（.txt）</button>
+        <button class="export-option" id="expMd" type="button">📝 Markdown（.md）</button>
+        <button class="export-option" id="expJson" type="button">💾 JSON（整棵树）</button>
+        <div class="dialog-actions">
+            <button class="btn ghost" id="exportCancel" type="button">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- 修改我的消息 -->
+<div class="dialog" id="editMsgDialog" hidden>
+    <div class="dialog-card sheet wide">
+        <div class="sheet-head">
+            <h2>修改这句话</h2>
+            <button class="icon-btn" id="editMsgClose" type="button" aria-label="关闭">✕</button>
+        </div>
+        <div class="sheet-body">
+            <p class="dialog-hint">修改后会作为一条新分支，原来的消息和它之后的剧情都会保留，可以用 ‹ › 切回去。</p>
+            <textarea class="text-area" id="editMsgText" rows="5"></textarea>
+        </div>
+        <div class="sheet-foot">
+            <span></span>
+            <div class="foot-right">
+                <button class="btn ghost" id="editMsgCancel" type="button">取消</button>
+                <button class="btn primary" id="editMsgSave" type="button">保存并重新回复</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="js/store.js"></script>
+<script src="js/api.js"></script>
+<script src="js/prompt.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
